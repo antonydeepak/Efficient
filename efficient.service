@@ -1,0 +1,12 @@
+[Unit]
+Description=Efficiency tracker for a productive day
+After=multi-user.target
+
+[Service]
+User=root
+Group=root
+WorkingDirectory=/home/gogsbread/efficient
+ExecStart=/usr/bin/python3 /home/gogsbread/efficient/network_host.py -b 70
+
+[Install]
+WantedBy=multi-user.target
