@@ -1,5 +1,5 @@
-from threading import Thread
 import time
+from threading import Thread
 
 class Runloop(object):
     grace_timeout_seconds = 2

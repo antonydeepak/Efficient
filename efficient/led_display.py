@@ -1,21 +1,23 @@
 from collections import namedtuple
+from journald_logging import LogManager
 from rgbmatrix import RGBMatrix, RGBMatrixOptions, graphics
 
-from journald_logging import LogManager
+from color import Color
+from display import Display
 
-class DisplayFont(graphics.Font):
+class LedFont(graphics.Font):
     def __init__(self, font_file):
         super().__init__()
         super().LoadFont(font_file)
 
-class Color:
-    Red,Green,Blue = graphics.Color(255, 0, 0), graphics.Color(0, 255, 0), graphics.Color(0, 0, 255)
+class LedColor:
+    Red,Green,Blue = Color(255, 0, 0), Color(0, 255, 0), Color(0, 0, 255)
 
-class LedDisplay(object):
-    defaultFont = DisplayFont("fonts/tom-thumb.bdf") 
-    defaultColor = Color.Green
+class LedDisplay(Display):
+    defaultFont = LedFont("fonts/tom-thumb.bdf") 
+    defaultColor = LedColor.Green
 
-    def __init__(self, options):
+    def __init__(self, options, font=defaultFont):
         self._logger = LogManager.get_logger(__name__)
         self._logger.debug("Initializing display with '{0}'".format(options))
 
@@ -39,38 +41,24 @@ class LedDisplay(object):
         self._matrix = RGBMatrix(options = matrix_options)
         self._offscreen_canvas = self._matrix.CreateFrameCanvas()
 
-        self._alignment = LedDisplay.Alignment(self._matrix.width, self._matrix.height)
+        self._font = font
 
-    @property 
-    def alignment(self):
-        return self._alignment
-        
-    def write(self, message, alignment, font=defaultFont, color=defaultColor):
+    def write(self, message, color=defaultColor):
         self._offscreen_canvas.Clear()
 
-        alignment = alignment(font)
-        x = alignment.x
-        y = alignment.y
+        x = 0
+        y = self._font.baseline
         for c in message:
             # support for '\n'
             if c == "\n":
-                x = alignment.x
-                y += (font.baseline + 1) # add an extra space so that the next line doensn't hug the baseline
+                x = 0
+                y += (self._font.baseline + 1) # add an extra space so that the next line doensn't hug the baseline
                 continue
-            x += font.DrawGlyph(self._offscreen_canvas, x, y, color, ord(c))
+            
+            x += self._font.DrawGlyph(self._offscreen_canvas, x, y, graphics.Color(color.R, color.G, color.B), ord(c))
 
         self._offscreen_canvas = self._matrix.SwapOnVSync(self._offscreen_canvas)
 
     def clear(self):
         self._offscreen_canvas.Clear()
         self._offscreen_canvas = self._matrix.SwapOnVSync(self._offscreen_canvas)
-
-    class Alignment(object):
-        def __init__(self, canvas_width, canvas_height):
-            self._width = canvas_width
-            self._height = canvas_height
-
-            self._align = namedtuple('Alignment', ['x', 'y'])
-
-        def top_left(self, font):
-            return self._align(x=0, y=font.baseline)

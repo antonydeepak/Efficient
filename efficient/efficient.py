@@ -52,8 +52,7 @@ class Efficient(object):
         timer = args[1]
 
         hours,minutes,seconds = Efficient._parse(timer.remaining)
-        alignment = display.alignment.top_left
-        display.write('{:02}:{:02}:{:02}'.format(hours, minutes, seconds), alignment)
+        display.write('{:02}:{:02}:{:02}'.format(hours, minutes, seconds))
 
     @staticmethod
     def _parse(timedelta):
