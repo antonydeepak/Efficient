@@ -52,7 +52,7 @@ class LedDisplay(Display):
             # support for '\n'
             if c == "\n":
                 x = 0
-                y += (self._font.baseline + 1) # add an extra space so that the next line doensn't hug the baseline
+                y += (self._font.baseline + 1) # add an extra space so that the next line doesn't hug the baseline
                 continue
             
             x += self._font.DrawGlyph(self._offscreen_canvas, x, y, graphics.Color(color.R, color.G, color.B), ord(c))
