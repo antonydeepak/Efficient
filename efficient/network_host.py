@@ -12,6 +12,7 @@ from socketserver import StreamRequestHandler
 from efficient import Efficient,EfficientException
 from journald_logging import LogManager
 from led_display import LedDisplay
+from tracker import WorkDayTracker
 
 class EfficientHandler(StreamRequestHandler):
     def __init__(self, efficient_tracker, request, client_address, server, max_data_length = 2048):
@@ -184,7 +185,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     display = LedDisplay(args)
-    efficient = Efficient(display)
+    tracker = WorkDayTracker() # TODO: have to add the proper tracker
+    efficient = Efficient(display,tracker)
     server = EfficientServer((args.host, args.port), EfficientHandler, efficient)
     log.info("Efficient server started at port {0}".format(args.port))
 
