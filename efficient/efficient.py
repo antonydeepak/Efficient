@@ -17,32 +17,34 @@ class Efficient(object):
 
     def start(self, duration, elapsed):
         if self._timer:
-            raise EfficientException("Timer already running. Stop this timer before starting a new one")
+            return
 
         with self._lock:
-            self._timer = CountdownTimer(duration, elapsed)
-            self._timer.start()
+            if not self._timer:
+                self._timer = CountdownTimer(duration, elapsed)
+                self._timer.start()
 
-            self._runloop = Runloop(delay=timedelta(hours=0, minutes=0, seconds=1))
-            self._runloop.start(action=self._update, action_args=(self._display, self._timer, self._tracker))
-
-            return self._runloop
+                self._runloop = Runloop(delay=timedelta(hours=0, minutes=0, seconds=1))
+                self._runloop.start(action=self._update, action_args=(self._display, self._timer, self._tracker))
 
     def pause(self):
-        if not self._timer:
-            raise EfficientException("Timer not started")
+        self._assert_timer_started()
 
         with self._lock:
             self._timer.stop()
 
     def resume(self):
-        if not self._timer:
-            raise EfficientException("Timer not started")
+        self._assert_timer_started()
 
         with self._lock:
             self._timer.start()
 
-    def end(self):
+    def wait_until_stopped(self):
+        self._assert_timer_started()
+
+        self._runloop.wait_until_stopped()
+
+    def stop(self):
         with self._lock:
             self._runloop.stop()
             self._timer.reset()
@@ -84,7 +86,7 @@ class Efficient(object):
                 duration += end_event.client_time_utc - start_events[event.start_event_type].client_time_utc
                 event_durations[range_event] = duration
                 del(start_events[event.start_event_type])
-        # If start event does not have an end event compute duration with datetime.utcnow() as it might an ongoin event
+        # If start event does not have an end event compute duration with datetime.utcnow() as it might an ongoing event
         for start_event in start_events:
             range_event = Efficient._base_range_event(start_event)
             duration = event_durations.get(range_event) if event_durations.get(range_event) else timedelta()
@@ -92,6 +94,10 @@ class Efficient(object):
             event_durations[range_event] = duration
 
         return event_durations
+
+    def _assert_timer_started(self):
+        if not self._timer:
+            raise EfficientException("Timer not started")
 
     @staticmethod
     def _base_range_event(event):

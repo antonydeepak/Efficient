@@ -8,9 +8,7 @@ from tracker import WorkDayTracker
 from tracker_events import *
 
 def terminate(signum, frame):
-    if runloop:
-        runloop.stop()
-    exit(0)
+    efficient.stop()
 
 if __name__ == '__main__':
     signal.signal(signal.SIGINT, terminate)
@@ -27,7 +25,6 @@ if __name__ == '__main__':
     tracker.handle(bs)
 
     efficient = Efficient(display, tracker)
-    runloop = efficient.start(timedelta(hours=8, minutes=0, seconds=0), lambda: efficient.end())
+    efficient.start(timedelta(hours=8, minutes=0, seconds=0), lambda: efficient.stop())
     print('Runloop started')
-    runloop.wait_until_stopped()
-    print('Runloop ended')
+    efficient.wait_until_stopped()

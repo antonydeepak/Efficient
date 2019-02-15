@@ -69,7 +69,7 @@ class EfficientHandler(StreamRequestHandler):
         seconds = duration['seconds']
 
         try:
-            self._efficient.start(timedelta(hours=hours, minutes=minutes, seconds=seconds), lambda: self._efficient.end())
+            self._efficient.start(timedelta(hours=hours, minutes=minutes, seconds=seconds), lambda: self._efficient.stop())
         except EfficientException as e:
             return str(e)
 
@@ -99,7 +99,7 @@ class EfficientHandler(StreamRequestHandler):
 
     def _handle_end(self):
         try:
-            self._efficient.end()
+            self._efficient.stop()
         except EfficientException as e:
             return str(e)
 
