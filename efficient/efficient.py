@@ -7,6 +7,14 @@ from runloop import Runloop
 from tracker_events import *
 
 class Efficient(object):
+    '''
+    The intent of Efficient is to provide insights to improve\change habits and to be a more productive.
+    In its current form, the Efficient system shows a count-down timer that provides a start/pause/resume/stop methods. This timer
+    gives a ticking metric for the user to complete his work.
+    In addition, the Efficient system also provides insights into events that occur during an activity. These events are tracked and
+    shown as metrics.
+    '''
+
     def __init__(self, display, tracker):
         self._display = display
         self._tracker = tracker
@@ -16,6 +24,10 @@ class Efficient(object):
         self._runloop = None
 
     def start(self, duration, elapsed):
+        '''
+        Starts a timer. Has only one active timer at a point in time
+        '''
+
         if self._timer:
             return
 
@@ -28,23 +40,30 @@ class Efficient(object):
                 self._runloop.start(action=self._update, action_args=(self._display, self._timer, self._tracker))
 
     def pause(self):
+        '''
+        Pauses the timer.
+        '''
+
         self._assert_timer_started()
 
         with self._lock:
             self._timer.stop()
 
     def resume(self):
+        '''
+        Resumes a paused timer.
+        '''
+
         self._assert_timer_started()
 
         with self._lock:
             self._timer.start()
 
-    def wait_until_stopped(self):
-        self._assert_timer_started()
-
-        self._runloop.wait_until_stopped()
-
     def stop(self):
+        '''
+        Stops the timer.
+        '''
+
         with self._lock:
             self._runloop.stop()
             self._timer.reset()
@@ -52,8 +71,21 @@ class Efficient(object):
 
             self._runloop = None
             self._timer = None
-        
+
+    def wait_until_stopped(self):
+        '''
+        Provides a mechanism to block the current thread until efficient.stop() method is called
+        '''
+
+        self._assert_timer_started()
+
+        self._runloop.wait_until_stopped()
+
     def _update(self, args):
+        '''
+        Called on every cycle of the update loop.
+        '''
+
         display = args[0]
         timer = args[1]
         tracker = args[2]
@@ -61,7 +93,7 @@ class Efficient(object):
         hours,minutes,seconds = Efficient._parse(timer.remaining)
         message = '{:02}:{:02}:{:02}'.format(hours, minutes, seconds)
 
-        event_durations = tracker.summarize(datetime.now(), aggregate=Efficient._aggregate)
+        event_durations = tracker.summarize(datetime.now(), aggregate=Efficient._aggregate_range_events)
         event_durations = Efficient._pretty_format(event_durations)
         top_2_event_durations = islice(sorted(event_durations, key=lambda x: x[1], reverse=True), 2)
         for event_duration in top_2_event_durations:
@@ -71,7 +103,13 @@ class Efficient(object):
         display.write(message)
 
     @staticmethod
-    def _aggregate(events):
+    def _aggregate_range_events(events):
+        '''
+        Aggregates events to show the top N events that took the most time.
+        It computes the duration between a start and end event. If the end event is not found then assume it is an ongoing event
+        and compute duration.
+        '''
+
         range_events = (event for event in events if isinstance(event, RangeEvent))
         start_events = {}
         event_durations = {}

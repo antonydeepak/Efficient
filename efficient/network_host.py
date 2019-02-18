@@ -54,6 +54,11 @@ class EfficientHandler(StreamRequestHandler):
         return message
 
     def _handle_start(self, args):
+        '''
+        Wrapper around the start() method of Efficient.
+        Parses the arguments and calls the start() method
+        '''
+
         if not args:
             message = "Command 'start' does not have any arguments"
             self._logger.debug(message)
@@ -78,6 +83,11 @@ class EfficientHandler(StreamRequestHandler):
         return response 
 
     def _handle_pause(self):
+        '''
+        Wrapper around the pause() method of Efficient.
+        Parses the arguments and calls the pause() method
+        '''
+
         try:
             self._efficient.pause()
         except EfficientException as e:
@@ -88,6 +98,11 @@ class EfficientHandler(StreamRequestHandler):
         return response 
 
     def _handle_resume(self):
+        '''
+        Wrapper around the resume() method of Efficient.
+        Parses the arguments and calls the resume() method
+        '''
+
         try:
             self._efficient.resume()
         except EfficientException as e:
@@ -98,6 +113,11 @@ class EfficientHandler(StreamRequestHandler):
         return response 
 
     def _handle_end(self):
+        '''
+        Wrapper around the stop() method of Efficient.
+        Parses the arguments and calls the stop() method
+        '''
+
         try:
             self._efficient.stop()
         except EfficientException as e:
