@@ -1,4 +1,11 @@
+from abc import ABC
+from abc import abstractmethod
 from datetime import timedelta
+
+class IEndEventCreator(ABC):
+    @abstractmethod
+    def create_end_event(self):
+        raise NotImplementedError('abstract type')
 
 class Event(object):
     def __init__(self, name, client_time_utc, server_time_utc):
@@ -33,9 +40,12 @@ class LunchEvent(AutoExpiringRangeEvent):
     def __init__(self, name, client_time_utc, server_time_utc):
         super().__init__(name, client_time_utc, server_time_utc, LunchStartEvent, LunchEndEvent, timedelta(minutes=45))
 
-class LunchStartEvent(LunchEvent):
+class LunchStartEvent(LunchEvent, IEndEventCreator):
     def __init__(self, client_time_utc, server_time_utc):
         super().__init__("start", client_time_utc, server_time_utc)
+
+    def create_end_event(self):
+        return LunchEndEvent(self.client_time_utc, self.server_time_utc)
 
 class LunchEndEvent(LunchEvent):
     def __init__(self, client_time_utc, server_time_utc):
@@ -45,10 +55,14 @@ class MiniBreakEvent(AutoExpiringRangeEvent):
     def __init__(self, name, client_time_utc, server_time_utc):
         super().__init__(name, client_time_utc, server_time_utc, MiniBreakStartEvent, MiniBreakEndEvent, timedelta(minutes=15))
 
-class MiniBreakStartEvent(MiniBreakEvent):
+class MiniBreakStartEvent(MiniBreakEvent, IEndEventCreator):
     def __init__(self, client_time_utc, server_time_utc):
         super().__init__("start", client_time_utc, server_time_utc)
+
+    def create_end_event(self):
+        return MiniBreakEndEvent(self.client_time_utc, self.server_time_utc)
 
 class MiniBreakEndEvent(MiniBreakEvent):
     def __init__(self, client_time_utc, server_time_utc):
         super().__init__("end", client_time_utc, server_time_utc)
+

@@ -1,162 +1,31 @@
 import argparse
 import codecs
-import json
 import signal
 import sys
 
-from datetime import timedelta
 from io import BytesIO
 from socketserver import TCPServer
 from socketserver import StreamRequestHandler
 
-from efficient import Efficient,EfficientException
-from journald_logging import LogManager
+from efficient import Efficient
+from efficient_message_handler import EfficientJsonMessageHandler
 from led_display import LedDisplay
+from logmanager import LogManager
 from tracker import WorkDayTracker
 
-class EfficientHandler(StreamRequestHandler):
+class EfficientNetworkMessageHandler(StreamRequestHandler):
     def __init__(self, efficient_tracker, request, client_address, server, max_data_length = 2048):
-        self._efficient = efficient_tracker
+        self._efficient_handler = EfficientJsonMessageHandler(efficient_tracker)
         self._max_data_length = max_data_length
-
-        self._logger = LogManager.get_logger(__name__)
 
         super().__init__(request, client_address, server)
 
     def handle(self):
         message = self.request.recv(self._max_data_length)
-        self._logger.debug("Handling message '{0}'".format(message))
+        response = self._efficient_handler.handle(message)
+        self._send_response(response)
 
-        success,command,data = self._parse_command(message)
-        if not success:
-            self._logger.info("Message parsing failed with '{0}'".format(data))
-            self._send_message(data)
-            return
-
-        response = self._handle_command(command, data)
-        self._send_message(response)
-
-    def _handle_command(self, name, data):
-        self._logger.debug("Handling command '{0}'".format(name))
-        if name == "start":
-            return self._handle_start(data['args'])
-        elif name == "pause":
-            return self._handle_pause()
-        elif name == "resume":
-            return self._handle_resume()
-        elif name == "end":
-            return self._handle_end()
-        elif name == "event":
-            return self._handle_event(data['args'])
-
-        message = "Command '{0}' not supported".format(name) 
-        self._logger.info(message)
-        return message
-
-    def _handle_start(self, args):
-        '''
-        Wrapper around the start() method of Efficient.
-        Parses the arguments and calls the start() method
-        '''
-
-        if not args:
-            message = "Command 'start' does not have any arguments"
-            self._logger.debug(message)
-            return message
-        if 'duration' not in args:
-            message = "Command 'start' does not have any 'duration' specified"
-            self._logger.debug(message)
-            return message
-
-        duration = args['duration']
-        hours = duration['hours']
-        minutes = duration['minutes']
-        seconds = duration['seconds']
-
-        try:
-            self._efficient.start(timedelta(hours=hours, minutes=minutes, seconds=seconds), lambda: self._efficient.stop())
-        except EfficientException as e:
-            return str(e)
-
-        response = "Timer started for hours:{0} minutes:{1} seconds:{2}".format(hours, minutes, seconds)
-        self._logger.info(response)
-        return response 
-
-    def _handle_pause(self):
-        '''
-        Wrapper around the pause() method of Efficient.
-        Parses the arguments and calls the pause() method
-        '''
-
-        try:
-            self._efficient.pause()
-        except EfficientException as e:
-            return str(e)
-
-        response = "Timer paused"
-        self._logger.info(response)
-        return response 
-
-    def _handle_resume(self):
-        '''
-        Wrapper around the resume() method of Efficient.
-        Parses the arguments and calls the resume() method
-        '''
-
-        try:
-            self._efficient.resume()
-        except EfficientException as e:
-            return str(e)
-
-        response = "Timer resumed"
-        self._logger.info(response)
-        return response 
-
-    def _handle_end(self):
-        '''
-        Wrapper around the stop() method of Efficient.
-        Parses the arguments and calls the stop() method
-        '''
-
-        try:
-            self._efficient.stop()
-        except EfficientException as e:
-            return str(e)
-
-        response = "Timer ended"
-        self._logger.info(response)
-        return response 
-
-    def _handle_event(self, args):
-        if not args:
-            message = "Command 'event' does not have any arguments"
-            self._logger.debug(message)
-            return message
-
-        if 'name' not in args:
-            message = "Event does not have any 'name' specified"
-            self._logger.debug(message)
-            return message
-
-        name = args['name']
-        metadata = args['metadata'] if ('metadata' in args) else {}
-        self._logger.event(name, metadata)
-
-        return "Event '{0}' logged".format(name)
-
-    def _parse_command(self, message):
-        try:
-            str_message = message.decode('utf-8')
-            data = json.loads(str_message)
-        except json.JSONDecodeError as e:
-            return (False, None, "Malformed Json passed. {0}".format(str(e)))
-
-        if 'command' not in data:
-            return (False, None, "Json not of the correct type. Missing 'command' type")
-
-        return (True, data['command'], data)
-
-    def _send_message(self, message, ending='\n'):
+    def _send_response(self, message, ending='\n'):
         message_to_send = message + ending
         message_bytes = message_to_send.encode('utf-8')
         self.wfile.write(message_bytes)
@@ -205,9 +74,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     display = LedDisplay(args)
-    tracker = WorkDayTracker() # TODO: have to add the proper tracker
+    tracker = WorkDayTracker()
     efficient = Efficient(display,tracker)
-    server = EfficientServer((args.host, args.port), EfficientHandler, efficient)
+    server = EfficientServer((args.host, args.port), EfficientNetworkMessageHandler, efficient)
     log.info("Efficient server started at port {0}".format(args.port))
 
     server.serve_forever()

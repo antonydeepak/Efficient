@@ -1,26 +1,27 @@
 from systemd import journal
 
-class LogManager(object):
-    @staticmethod
-    def get_logger(name):
-        return Logger(name)
-
-class Logger(object):
-    def __init__(self, name):
+class JournaldLogger(object):
+    def __init__(self, name, journald_message_id):
         self._name = name
+        self._journald_message_id = journald_message_id
 
     def debug(self, message):
-        journal.send(message, PRIORITY=journal.LOG_DEBUG, LOGGER=self._name)
+        journal.send(message, PRIORITY=journal.LOG_DEBUG, MESSAGE_ID=self._journald_message_id, LOGGER=self._name)
 
     def info(self, message):
-        journal.send(message, PRIORITY=journal.LOG_INFO, LOGGER=self._name)
+        journal.send(message, PRIORITY=journal.LOG_INFO, MESSAGE_ID=self._journald_message_id, LOGGER=self._name)
 
     def error(self, message):
-        journal.send(message, PRIORITY=journal.LOG_ERR, LOGGER=self._name)
+        journal.send(message, PRIORITY=journal.LOG_ERR, MESSAGE_ID=self._journald_message_id, LOGGER=self._name)
 
-    def event(self, name, metadata):
-        message = "Recording event '{0}'".format(name) #just not required but lazy to deal with `sendv` api
-        journal.send(message, PRIORITY=journal.LOG_INFO, LOGGER=self._name, EVENT_NAME=name, **(Logger._format_metadata(metadata)))
+    def event(self, event):
+        message = f"Event '{event.name}'" #just not required but lazy to deal with `sendv` api which doesn't need message
+        journal.send(
+            message,
+            PRIORITY=journal.LOG_INFO,
+            MESSAGE_ID=self._journald_message_id,
+            LOGGER=self._name,
+            **(JournaldLogger._format_metadata(event.__dict__)))
 
     @staticmethod
     def _format_metadata(metadata):

@@ -3,8 +3,9 @@ from itertools import islice
 from threading import RLock
 
 from countdown_timer import CountdownTimer
+from logmanager import LogManager
 from runloop import Runloop
-from tracker_events import *
+from tracker_events import Event,RangeEvent
 
 class Efficient(object):
     '''
@@ -19,6 +20,7 @@ class Efficient(object):
         self._display = display
         self._tracker = tracker
 
+        self._logger = LogManager.get_logger(__name__)
         self._lock = RLock()
         self._timer = None
         self._runloop = None
@@ -80,6 +82,11 @@ class Efficient(object):
         self._assert_timer_started()
 
         self._runloop.wait_until_stopped()
+
+    def event(self, event):
+        assert(isinstance(event, Event))
+
+        self._logger.event(event)
 
     def _update(self, args):
         '''
